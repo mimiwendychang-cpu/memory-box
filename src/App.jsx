@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Home, Globe, User, Leaf, Plus, BookOpen } from 'lucide-react';
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
-// 🌟 這裡補上了 doc, updateDoc, deleteDoc 的載入
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 
 // 引入智慧大腦
@@ -29,8 +28,19 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 const db = getFirestore(app);
 
-function AppContent() {
+// 🌟 核心修復：用 AppProvider 包裝整個應用程式，這樣全站才抓得到主題色
+export default function App() {
+  return (
+    <AppProvider>
+      <AppMain />
+    </AppProvider>
+  );
+}
+
+// 這是防潮箱真正的運作核心
+function AppMain() {
   const [user, setUser] = useState(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true); // 載入狀態
   const [activeTab, setActiveTab] = useState('home');
   const [addStep, setAddStep] = useState(1);
   const [memories, setMemories] = useState([]);
@@ -39,11 +49,16 @@ function AppContent() {
   const { activeTheme, highContrast } = useAppContext();
   const themeColor = activeTheme.mainColor;
 
+  // 監聽登入狀態
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => setUser(u));
+    const unsubscribe = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setIsAuthLoading(false); // 檢查完畢，關閉 Loading
+    });
     return () => unsubscribe();
   }, []);
 
+  // 抓取回憶資料庫
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "users", user.uid, "memories"), orderBy("createdAt", "desc"));
@@ -67,7 +82,7 @@ function AppContent() {
     }
   };
 
-  // 🔄 🌟 新增：雲端修改功能
+  // 🔄 雲端修改功能
   const handleUpdateMemory = async (id, updatedData) => {
     try {
       const memoryRef = doc(db, "users", user.uid, "memories", id);
@@ -78,7 +93,7 @@ function AppContent() {
     }
   };
 
-  // 🗑️ 🌟 新增：雲端刪除功能
+  // 🗑️ 雲端刪除功能
   const handleDeleteMemory = async (id) => {
     if (window.confirm("確定要永久刪除這段珍貴的回憶嗎？此動作將無法復原喔！")) {
       try {
@@ -91,8 +106,22 @@ function AppContent() {
     }
   };
 
-  if (!user) return <LoginScreen themeColor={themeColor} onLogin={() => signInWithPopup(auth, provider)} />;
+  // 1️⃣ 正在檢查身分時的 Loading 畫面
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-orange-200 border-t-[#B9744B] rounded-full animate-spin"></div>
+        <p className="mt-4 text-[#B9744B] font-bold text-sm">正在確認您的回憶鑰匙...</p>
+      </div>
+    );
+  }
 
+  // 2️⃣ 如果沒登入，顯示登入畫面
+  if (!user) {
+    return <LoginScreen themeColor={themeColor} onLogin={() => signInWithPopup(auth, provider)} />;
+  }
+
+  // 3️⃣ 登入成功，顯示主程式介面
   return (
     <div className={`min-h-screen bg-gray-100 flex justify-center md:items-center overflow-hidden transition-all duration-500 ${highContrast ? 'contrast-125' : ''}`}>
       <div className="w-full h-screen md:max-w-[420px] md:h-[90vh] bg-[#FDFCFB] md:rounded-[40px] shadow-2xl flex flex-col relative md:border-[8px] border-white overflow-hidden">
@@ -111,17 +140,12 @@ function AppContent() {
         </header>
 
         <main className="flex-1 overflow-y-auto pb-32">
-          {/* 🌟 修正點：將 themeColor 正確傳入 HomeView */}
           {activeTab === 'home' && <HomeView setTab={setActiveTab} themeColor={themeColor} memories={memories} user={user} />}
           
-          {/* 🌟 修正與升級點：傳入正確變數、對接更新與刪除函數 */}
           {activeTab === 'library' && (
             <LibraryView 
               memories={memories} 
-              onAddNew={() => {
-                setActiveTab('add');
-                setAddStep(1);
-              }} 
+              onAddNew={() => { setActiveTab('add'); setAddStep(1); }} 
               onUpdate={handleUpdateMemory}
               onDelete={handleDeleteMemory}
             />
@@ -150,60 +174,6 @@ function AppContent() {
     </div>
   );
 }
-
-export default function App() {
-  const [user, setUser] = useState(null);
-  
-  // 🌟 關鍵新增：加入一個「正在確認身分」的狀態，預設為 true (一進來就先檢查)
-  const [isAuthLoading, setIsAuthLoading] = useState(true);
-
-  useEffect(() => {
-    const auth = getAuth();
-    
-    // 監聽使用者的登入狀態
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      // 🌟 關鍵新增：Firebase 查完身分了，把 Loading 關掉！
-      setIsAuthLoading(false); 
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const handleLogin = () => {
-    const auth = getAuth();
-    const provider = new GoogleAuthProvider();
-    // 執行跳轉登入
-    signInWithRedirect(auth, provider);
-  };
-
-  // 🌟 關鍵防護罩：如果還在檢查身分，顯示一個質感的 Loading 畫面，不要急著畫出登入按鈕！
-  if (isAuthLoading) {
-    return (
-      <div className="min-h-screen bg-[#FAF7F2] flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-4 border-orange-200 border-t-[#B9744B] rounded-full animate-spin"></div>
-        <p className="mt-4 text-[#B9744B] font-bold text-sm">正在確認您的回憶鑰匙...</p>
-      </div>
-    );
-  }
-
-  // 檢查完畢，如果沒有使用者，才顯示登入畫面
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[#FAF7F2] flex flex-col items-center justify-center">
-         {/* 這裡放你截圖裡的那顆 Google 登入按鈕，並綁定 onClick={handleLogin} */}
-      </div>
-    );
-  }
-
-  // 👇 如果登入成功，就顯示數位防潮箱的主程式
-  return (
-    <div>
-      {/* 你的首頁 / 記憶庫畫面 */}
-    </div>
-  );
-}
-// 🚨 把這段完整的貼在 App.jsx 的最底下！
 
 function LoginScreen({ themeColor, onLogin }) {
   return (
