@@ -152,10 +152,55 @@ function AppContent() {
 }
 
 export default function App() {
+  const [user, setUser] = useState(null);
+  
+  // 🌟 關鍵新增：加入一個「正在確認身分」的狀態，預設為 true (一進來就先檢查)
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  useEffect(() => {
+    const auth = getAuth();
+    
+    // 監聽使用者的登入狀態
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      // 🌟 關鍵新增：Firebase 查完身分了，把 Loading 關掉！
+      setIsAuthLoading(false); 
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleLogin = () => {
+    const auth = getAuth();
+    const provider = new GoogleAuthProvider();
+    // 執行跳轉登入
+    signInWithRedirect(auth, provider);
+  };
+
+  // 🌟 關鍵防護罩：如果還在檢查身分，顯示一個質感的 Loading 畫面，不要急著畫出登入按鈕！
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-orange-200 border-t-[#B9744B] rounded-full animate-spin"></div>
+        <p className="mt-4 text-[#B9744B] font-bold text-sm">正在確認您的回憶鑰匙...</p>
+      </div>
+    );
+  }
+
+  // 檢查完畢，如果沒有使用者，才顯示登入畫面
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#FAF7F2] flex flex-col items-center justify-center">
+         {/* 這裡放你截圖裡的那顆 Google 登入按鈕，並綁定 onClick={handleLogin} */}
+      </div>
+    );
+  }
+
+  // 👇 如果登入成功，就顯示數位防潮箱的主程式
   return (
-    <AppProvider>
-      <AppContent />
-    </AppProvider>
+    <div>
+      {/* 你的首頁 / 記憶庫畫面 */}
+    </div>
   );
 }
 // 🚨 把這段完整的貼在 App.jsx 的最底下！
