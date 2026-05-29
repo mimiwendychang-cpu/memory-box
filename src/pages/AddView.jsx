@@ -94,8 +94,11 @@ export default function AddView({ step, setStep, onFinish }) {
     try {
       // 忍者隱身術：把金鑰拆成兩半，騙過 GitHub 掃描器！
       // 為了明天的比賽 Demo，我們先直接把新金鑰寫死在這裡測試！
+      // 1. 先讀取環境變數（記得變數名稱要跟 .env 裡的一樣）
       const apiKey = import.meta.env.VITE_GCP_API_KEY;
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+
+// 2. 把變數帶入網址字串中
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
       const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : '';
       const hasUserDraft = formData.story.trim().length > 0;
       
