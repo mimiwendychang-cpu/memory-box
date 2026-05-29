@@ -92,14 +92,8 @@ export default function AddView({ step, setStep, onFinish }) {
     setIsGeneratingStory(true);
 
     try {
-      const API_KEYS = [
-        'AQ.Ab8RN6IRk5Vb2HKvXfOVqC7kL4QeHbbg6XNfFsyVjmmOAk4tUQ', 
-        '', '', '' 
-      ];
-      const activeKeys = API_KEYS.filter(key => key.trim() !== '');
-      const selectedKey = activeKeys[Math.floor(Math.random() * activeKeys.length)];
-
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${selectedKey}`;
+      const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
       const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : '';
       const hasUserDraft = formData.story.trim().length > 0;
       
