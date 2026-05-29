@@ -98,7 +98,7 @@ export default function AddView({ step, setStep, onFinish }) {
      const apiKey = import.meta.env.VITE_GCP_API_KEY.trim(); 
 
 // 2. 網址直接寫乾淨，不要加 ?key=... (確認使用 2.5 版本)
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
       const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : '';
       const hasUserDraft = formData.story.trim().length > 0;
       
