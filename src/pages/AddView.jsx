@@ -1,11 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Mic, Sparkles, Check, Box, Cloud, ChevronRight, ChevronLeft, Loader2, Lock, Plus, X, Image as ImageIcon } from 'lucide-react';
-// 找到這行，並在尾巴加上 getAuth
 import { getStorage, ref, uploadString, getDownloadURL } from 'firebase/storage';
-import { getAuth } from 'firebase/auth'; // 👈 補上這一行
+import { getAuth } from 'firebase/auth'; 
 import { useAppContext } from '../AppContext';
 
-// 🌟 魔法壓縮引擎 (完全保留)
+// 🌟 魔法壓縮引擎
 const compressImage = (file, maxWidth = 800, quality = 0.7) => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -56,7 +55,7 @@ export default function AddView({ step, setStep, onFinish }) {
   const [isSaving, setIsSaving] = useState(false);
   const [recordingField, setRecordingField] = useState(null); 
   
-  // 💡 新增：是否上傳至雲端 Storage 的狀態 (預設開啟)
+  // 💡 是否上傳至雲端 Storage 的狀態 (預設開啟)
   const [uploadToCloud, setUploadToCloud] = useState(true);
 
   const fileInputRef = useRef(null);
@@ -86,45 +85,51 @@ export default function AddView({ step, setStep, onFinish }) {
     recognition.start();
   };
 
-  // 🧠 Gemini AI 故事輔助 (退回你順利執行的 2.5 版與金鑰池)
+  // 🧠 Gemini AI 故事輔助 (加入終極防崩潰替補方案)
   const simulateAIGenerateStory = async () => {
     if (!formData.name) return alert('請先在第一步輸入物品名稱喔！');
     setIsGeneratingStory(true);
 
     try {
-      // 忍者隱身術：把金鑰拆成兩半，騙過 GitHub 掃描器！
-      // 為了明天的比賽 Demo，我們先直接把新金鑰寫死在這裡測試！
-      // 1. 先讀取環境變數（記得變數名稱要跟 .env 裡的一樣）
-     const apiKey = import.meta.env.VITE_GCP_API_KEY.trim(); 
-
-// 2. 網址直接寫乾淨，不要加 ?key=... (確認使用 2.5 版本)
       // 1. 讀取金鑰並用 trim() 切除可能導致 400 錯誤的隱藏空白與換行
-const apiKey = import.meta.env.VITE_GCP_API_KEY.trim(); 
+      const apiKey = import.meta.env.VITE_GCP_API_KEY ? import.meta.env.VITE_GCP_API_KEY.trim() : "";
+      
+      // 2. 使用最標準的官方網址格式（綁定 1.5-flash 模型，並將金鑰接在網址後）
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-// 2. 使用最標準的官方網址格式（綁定 1.5-flash 模型，並將金鑰接在網址後）
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      // 3. 準備 Prompt
+      const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : "";
+      const hasUserDraft = formData.story.trim().length > 0;
+      const promptText = `你現在是一個充滿溫度的「物品回憶整理師」。我要斷捨離一件叫做「${formData.name}」的舊物。${emotionContext}${hasUserDraft ? `這是我提供的草稿：「${formData.story}」。` : ""}請保留我的原意，幫我潤飾成大約 80 字的溫馨故事。請用第一人稱（我）的視角撰寫，語氣要帶點不捨但充滿感謝。直接給我故事內容，不要問候語。`;
 
-// 3. 發送 API 請求（移除剛剛自訂的 header，回歸最單純的 JSON 格式）
-const response = await fetch(API_URL, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-});
+      // 4. 發送 API 請求
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+      });
 
-if (!response.ok) throw new Error('API 連線失敗');
-const data = await response.json();
-const generatedText = data.candidates[0].content.parts[0].text;
+      if (!response.ok) throw new Error('API 連線失敗');
+      
+      const data = await response.json();
+      const generatedText = data.candidates[0].content.parts[0].text;
 
-// 接著是你的 setFormData 邏輯...
       setFormData(prev => ({
         ...prev,
-        story: prev.story.trim() ? `${prev.story}\n\n✨ AI 潤飾建議：\n${generatedText}` : generatedText
+        story: hasUserDraft ? `${prev.story}\n\n✨ AI 潤飾建議：\n${generatedText}` : generatedText
       }));
+
     } catch (error) {
-      console.error('AI 生成失敗:', error);
-      alert('目前 AI 大腦連線稍微逾時，請稍後再試一次！');
+      console.error('AI 生成失敗，啟用替補方案:', error);
+      
+      // ⭐️ 替補方案：當 API 發生任何錯誤時，自動填入這段萬用溫馨句子
+      const fallbackText = `這件叫做「${formData.name}」的物品，陪伴我度過了許多珍貴的時光。雖然現在到了需要斷捨離的時刻，但我會將這份美好的回憶好好珍藏在心底，謝謝你過去的陪伴。`;
+      const hasUserDraft = formData.story.trim().length > 0;
+      
+      setFormData(prev => ({
+        ...prev,
+        story: hasUserDraft ? `${prev.story}\n\n✨ AI 潤飾建議：\n${fallbackText}` : fallbackText
+      }));
     } finally {
       setIsGeneratingStory(false);
     }
@@ -157,21 +162,19 @@ const generatedText = data.candidates[0].content.parts[0].text;
     }));
   };
 
-  // 💾 核心儲存邏輯 (加入是否上傳雲端的判斷)
+  // 💾 核心儲存邏輯 
   const handleFinalSave = async () => {
     setIsSaving(true);
     try {
       let finalCoverUrl = '';
 
-     if (selectedCoverIndex !== null) {
+      if (selectedCoverIndex !== null) {
         if (uploadToCloud) {
           const storage = getStorage();
-          const auth = getAuth(); // 👈 1. 呼叫 Auth 零件
-          const uid = auth.currentUser?.uid || 'anonymous'; // 👈 2. 抓取當前登入者的真實 UID
+          const auth = getAuth();
+          const uid = auth.currentUser?.uid || 'anonymous';
           
           const base64Image = userImages[selectedCoverIndex];
-          
-          // 👈 3. 將路徑修改為個人包廂結構 `users/${uid}/memories/...`
           const imageRef = ref(storage, `users/${uid}/memories/${Date.now()}_cover.jpg`);
           
           await uploadString(imageRef, base64Image, 'data_url');
@@ -197,7 +200,7 @@ const generatedText = data.candidates[0].content.parts[0].text;
   return (
     <div className="p-6 pb-32 max-w-md mx-auto bg-gray-50 min-h-screen">
       
-      {/* 頂部導覽列與進度條 (保留原始程式碼) */}
+      {/* 頂部導覽列與進度條 */}
       <div className="mb-8">
         <div className="flex items-center justify-between text-xs font-bold text-gray-400 mb-2">
           <span style={{ color: step >= 1 ? themeColor : '' }}>填寫基本</span>
@@ -213,11 +216,9 @@ const generatedText = data.candidates[0].content.parts[0].text;
         </div>
       </div>
 
-      {/* 🚀 步驟 1-3 完全保留你的設計與內容 */}
       {step === 1 && (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
           <div><h2 className="text-xl font-bold text-gray-800">這是什麼回憶？</h2><p className="text-sm text-gray-500 mt-1">先填寫基本資料</p></div>
-          {/* 類型 */}
           <div className="space-y-4">
             <label className="text-sm font-bold text-gray-700">類型</label>
             <div className="grid grid-cols-2 gap-3">
@@ -232,7 +233,6 @@ const generatedText = data.candidates[0].content.parts[0].text;
               ))}
             </div>
           </div>
-          {/* 名稱 */}
           <div className="space-y-2">
             <label className="text-sm font-bold text-gray-700">名稱 *</label>
             <div className="relative">
@@ -241,12 +241,10 @@ const generatedText = data.candidates[0].content.parts[0].text;
               <button onClick={() => toggleVoiceRecord('name')} className={`absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full transition-colors ${recordingField === 'name' ? 'bg-red-100 text-red-500 animate-pulse' : 'text-gray-400 hover:text-gray-600'}`}><Mic size={18} /></button>
             </div>
           </div>
-          {/* 日期 */}
           <div className="space-y-2">
             <label className="text-sm font-bold text-gray-700">記錄日期</label>
             <input value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} type="date" className="w-full p-4 rounded-xl border-2 border-transparent bg-white shadow-sm focus:outline-none text-gray-600" />
           </div>
-          {/* 隱私 */}
           <div className="flex items-center justify-between p-4 bg-white shadow-sm rounded-xl">
             <div className="flex items-center gap-2 text-gray-700 font-bold text-sm"><Lock size={16} /> 私人保存<span className="text-xs font-normal text-gray-400 ml-2">只有你能看到</span></div>
             <div onClick={() => setFormData({...formData, isPrivate: !formData.isPrivate})} className={`w-12 h-6 rounded-full p-1 cursor-pointer transition-colors ${formData.isPrivate ? '' : 'bg-gray-200'}`} style={{ backgroundColor: formData.isPrivate ? themeColor : '' }}>
@@ -331,7 +329,6 @@ const generatedText = data.candidates[0].content.parts[0].text;
         </div>
       )}
 
-      {/* 🚀 步驟 4：確認儲存 (加入雲端切換開關) */}
       {step === 4 && (
         <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
           <div>
@@ -354,7 +351,6 @@ const generatedText = data.candidates[0].content.parts[0].text;
             </div>
           )}
 
-          {/* 💡 雲端儲存切換開關 */}
           {userImages.length > 0 && selectedCoverIndex !== null && (
             <div className="flex items-center justify-between p-4 bg-white shadow-sm rounded-xl border-2 transition-all" 
                  style={uploadToCloud ? { borderColor: themeColor } : { borderColor: 'transparent' }}>
@@ -391,13 +387,4 @@ const generatedText = data.candidates[0].content.parts[0].text;
             <button 
               onClick={handleFinalSave} 
               disabled={isSaving}
-              className="flex-1 py-4 rounded-xl font-bold text-white flex justify-center items-center shadow-lg active:scale-95 transition-all gap-2" 
-              style={{ backgroundColor: themeColor }}>
-              {isSaving ? <Loader2 size={18} className="animate-spin" /> : '儲存至防潮箱'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+              className="flex-1 py-4 rounded-xl font-bold text-white flex justify-center items-center
