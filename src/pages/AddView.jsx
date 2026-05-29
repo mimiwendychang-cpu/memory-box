@@ -99,7 +99,7 @@ export default function AddView({ step, setStep, onFinish }) {
       const activeKeys = API_KEYS.filter(key => key.trim() !== '');
       const selectedKey = activeKeys[Math.floor(Math.random() * activeKeys.length)];
 
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${selectedKey}`;
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${selectedKey}`;
       const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : '';
       const hasUserDraft = formData.story.trim().length > 0;
       
