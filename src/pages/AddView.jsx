@@ -95,11 +95,10 @@ export default function AddView({ step, setStep, onFinish }) {
       // 忍者隱身術：把金鑰拆成兩半，騙過 GitHub 掃描器！
       // 為了明天的比賽 Demo，我們先直接把新金鑰寫死在這裡測試！
       // 1. 先讀取環境變數（記得變數名稱要跟 .env 裡的一樣）
-      const apiKey = import.meta.env.VITE_GCP_API_KEY;
-      console.log("Vercel 讀到的金鑰前綴：", apiKey ? apiKey.substring(0, 5) : "找不到金鑰！");
+     const apiKey = import.meta.env.VITE_GCP_API_KEY.trim(); 
 
-// 2. 把變數帶入網址字串中
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+// 2. 網址直接寫乾淨，不要加 ?key=... (確認使用 2.5 版本)
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent`;
       const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : '';
       const hasUserDraft = formData.story.trim().length > 0;
       
@@ -108,15 +107,16 @@ export default function AddView({ step, setStep, onFinish }) {
         請用第一人稱（我）的視角撰寫，語氣要帶點不捨但充滿感謝。直接給我故事內容，不要問候語。`;
 
       const response = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-      });
+       method: 'POST',
+       headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey // <--- 用這個官方專用 Header 傳遞新版 AQ 金鑰
+                },
+       body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+    });
 
       if (!response.ok) throw new Error('API 連線失敗');
-      const data = await response.json(); 
-      const generatedText = data.candidates[0].content.parts[0].text;
-
+      const data = await response.json();
       setFormData(prev => ({
         ...prev,
         story: prev.story.trim() ? `${prev.story}\n\n✨ AI 潤飾建議：\n${generatedText}` : generatedText
