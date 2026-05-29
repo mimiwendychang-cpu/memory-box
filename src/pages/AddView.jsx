@@ -96,6 +96,7 @@ export default function AddView({ step, setStep, onFinish }) {
       // 為了明天的比賽 Demo，我們先直接把新金鑰寫死在這裡測試！
       // 1. 先讀取環境變數（記得變數名稱要跟 .env 裡的一樣）
       const apiKey = import.meta.env.VITE_GCP_API_KEY;
+      console.log("Vercel 讀到的金鑰前綴：", apiKey ? apiKey.substring(0, 5) : "找不到金鑰！");
 
 // 2. 把變數帶入網址字串中
       const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
