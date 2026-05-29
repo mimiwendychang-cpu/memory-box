@@ -93,11 +93,10 @@ export default function AddView({ step, setStep, onFinish }) {
 
     try {
       // 忍者隱身術：把金鑰拆成兩半，騙過 GitHub 掃描器！
-      const keyPart1 = "AQ.Ab8RN6Kvq7MgzdTRxra"; // 把你的新金鑰從中間隨便切開，前半段貼這裡
-      const keyPart2 = "DtMbErra5XMR_8WF8Ybpd2K0zRP_Zaw"; // 後半段貼這裡
-      const API_KEY = keyPart1 + keyPart2;
+      // 為了明天的比賽 Demo，我們先直接把新金鑰寫死在這裡測試！
+      const API_KEY = "AIzaSyCgX7KG1QR1dH6HFyAS4D00-qxi21n4tTA";
 
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
       const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : '';
       const hasUserDraft = formData.story.trim().length > 0;
       
