@@ -55,7 +55,6 @@ export default function AddView({ step, setStep, onFinish }) {
   const [isSaving, setIsSaving] = useState(false);
   const [recordingField, setRecordingField] = useState(null); 
   
-  // 💡 是否上傳至雲端 Storage 的狀態 (預設開啟)
   const [uploadToCloud, setUploadToCloud] = useState(true);
 
   const fileInputRef = useRef(null);
@@ -74,7 +73,7 @@ export default function AddView({ step, setStep, onFinish }) {
       const transcript = event.results[0][0].transcript;
       setFormData(prev => ({
         ...prev,
-        [targetField]: prev[targetField] ? `${prev[targetField]}，${transcript}` : transcript
+        [targetField]: prev[targetField] ? prev[targetField] + '，' + transcript : transcript
       }));
     };
     recognition.onerror = () => {
@@ -85,24 +84,24 @@ export default function AddView({ step, setStep, onFinish }) {
     recognition.start();
   };
 
-  // 🧠 Gemini AI 故事輔助 (加入終極防崩潰替補方案)
+  // 🧠 Gemini AI 故事輔助 (移除所有複雜的字串拼接，保證編譯成功)
   const simulateAIGenerateStory = async () => {
     if (!formData.name) return alert('請先在第一步輸入物品名稱喔！');
     setIsGeneratingStory(true);
 
     try {
-      // 1. 讀取金鑰並用 trim() 切除可能導致 400 錯誤的隱藏空白與換行
       const apiKey = import.meta.env.VITE_GCP_API_KEY ? import.meta.env.VITE_GCP_API_KEY.trim() : "";
-      
-      // 2. 使用最標準的官方網址格式（綁定 1.5-flash 模型，並將金鑰接在網址後）
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + apiKey;
 
-      // 3. 準備 Prompt
-      const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : "";
+      const emotionContext = formData.emotions.length > 0 ? "這件物品帶給我的情感是：" + formData.emotions.join('、') + "。" : "";
       const hasUserDraft = formData.story.trim().length > 0;
-      const promptText = `你現在是一個充滿溫度的「物品回憶整理師」。我要斷捨離一件叫做「${formData.name}」的舊物。${emotionContext}${hasUserDraft ? `這是我提供的草稿：「${formData.story}」。` : ""}請保留我的原意，幫我潤飾成大約 80 字的溫馨故事。請用第一人稱（我）的視角撰寫，語氣要帶點不捨但充滿感謝。直接給我故事內容，不要問候語。`;
+      
+      let promptText = "你現在是一個充滿溫度的「物品回憶整理師」。我要斷捨離一件叫做「" + formData.name + "」的舊物。" + emotionContext;
+      if (hasUserDraft) {
+        promptText += "這是我提供的草稿：「" + formData.story + "」。";
+      }
+      promptText += "請保留我的原意，幫我潤飾成大約 80 字的溫馨故事。請用第一人稱（我）的視角撰寫，語氣要帶點不捨但充滿感謝。直接給我故事內容，不要問候語。";
 
-      // 4. 發送 API 請求
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -114,22 +113,21 @@ export default function AddView({ step, setStep, onFinish }) {
       const data = await response.json();
       const generatedText = data.candidates[0].content.parts[0].text;
 
-      setFormData(prev => ({
-        ...prev,
-        story: hasUserDraft ? `${prev.story}\n\n✨ AI 潤飾建議：\n${generatedText}` : generatedText
-      }));
+      setFormData(prev => {
+        const newStory = hasUserDraft ? prev.story + "\n\n✨ AI 潤飾建議：\n" + generatedText : generatedText;
+        return { ...prev, story: newStory };
+      });
 
     } catch (error) {
       console.error('AI 生成失敗，啟用替補方案:', error);
       
-      // ⭐️ 替補方案：當 API 發生任何錯誤時，自動填入這段萬用溫馨句子
-      const fallbackText = `這件叫做「${formData.name}」的物品，陪伴我度過了許多珍貴的時光。雖然現在到了需要斷捨離的時刻，但我會將這份美好的回憶好好珍藏在心底，謝謝你過去的陪伴。`;
+      const fallbackText = "這件叫做「" + formData.name + "」的物品，陪伴我度過了許多珍貴的時光。雖然現在到了需要斷捨離的時刻，但我會將這份美好的回憶好好珍藏在心底，謝謝你過去的陪伴。";
       const hasUserDraft = formData.story.trim().length > 0;
       
-      setFormData(prev => ({
-        ...prev,
-        story: hasUserDraft ? `${prev.story}\n\n✨ AI 潤飾建議：\n${fallbackText}` : fallbackText
-      }));
+      setFormData(prev => {
+        const newStory = hasUserDraft ? prev.story + "\n\n✨ AI 潤飾建議：\n" + fallbackText : fallbackText;
+        return { ...prev, story: newStory };
+      });
     } finally {
       setIsGeneratingStory(false);
     }
@@ -175,7 +173,7 @@ export default function AddView({ step, setStep, onFinish }) {
           const uid = auth.currentUser?.uid || 'anonymous';
           
           const base64Image = userImages[selectedCoverIndex];
-          const imageRef = ref(storage, `users/${uid}/memories/${Date.now()}_cover.jpg`);
+          const imageRef = ref(storage, "users/" + uid + "/memories/" + Date.now() + "_cover.jpg");
           
           await uploadString(imageRef, base64Image, 'data_url');
           finalCoverUrl = await getDownloadURL(imageRef);
@@ -200,7 +198,6 @@ export default function AddView({ step, setStep, onFinish }) {
   return (
     <div className="p-6 pb-32 max-w-md mx-auto bg-gray-50 min-h-screen">
       
-      {/* 頂部導覽列與進度條 */}
       <div className="mb-8">
         <div className="flex items-center justify-between text-xs font-bold text-gray-400 mb-2">
           <span style={{ color: step >= 1 ? themeColor : '' }}>填寫基本</span>
@@ -387,4 +384,13 @@ export default function AddView({ step, setStep, onFinish }) {
             <button 
               onClick={handleFinalSave} 
               disabled={isSaving}
-              className="flex-1 py-4 rounded-xl font-bold text-white flex justify-center items-center
+              className="flex-1 py-4 rounded-xl font-bold text-white flex justify-center items-center shadow-lg active:scale-95 transition-all gap-2" 
+              style={{ backgroundColor: themeColor }}>
+              {isSaving ? <Loader2 size={18} className="animate-spin" /> : '儲存至防潮箱'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
