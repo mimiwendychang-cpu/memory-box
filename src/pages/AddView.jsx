@@ -117,6 +117,7 @@ export default function AddView({ step, setStep, onFinish }) {
 
       if (!response.ok) throw new Error('API 連線失敗');
       const data = await response.json();
+      const generatedText = data.candidates[0].content.parts[0].text;
       setFormData(prev => ({
         ...prev,
         story: prev.story.trim() ? `${prev.story}\n\n✨ AI 潤飾建議：\n${generatedText}` : generatedText
