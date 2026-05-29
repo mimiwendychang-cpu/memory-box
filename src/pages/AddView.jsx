@@ -98,26 +98,26 @@ export default function AddView({ step, setStep, onFinish }) {
      const apiKey = import.meta.env.VITE_GCP_API_KEY.trim(); 
 
 // 2. 網址直接寫乾淨，不要加 ?key=... (確認使用 2.5 版本)
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`;
-      const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : '';
-      const hasUserDraft = formData.story.trim().length > 0;
-      
-      const promptText = `你現在是一個充滿溫度的「物品回憶整理師」。我要斷捨離一件叫做「${formData.name}」的舊物。${emotionContext}
-        ${hasUserDraft ? `這是我提供的草稿：「${formData.story}」。請保留我的原意，幫我潤飾成大約 80 字的溫馨故事。` : `請幫我無中生有，寫一段大約 80 字的溫馨回憶故事。`}
-        請用第一人稱（我）的視角撰寫，語氣要帶點不捨但充滿感謝。直接給我故事內容，不要問候語。`;
+      // 1. 讀取金鑰並用 trim() 切除可能導致 400 錯誤的隱藏空白與換行
+const apiKey = import.meta.env.VITE_GCP_API_KEY.trim(); 
 
-      const response = await fetch(API_URL, {
-       method: 'POST',
-       headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey // <--- 用這個官方專用 Header 傳遞新版 AQ 金鑰
-                },
-       body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-    });
+// 2. 使用最標準的官方網址格式（綁定 1.5-flash 模型，並將金鑰接在網址後）
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
-      if (!response.ok) throw new Error('API 連線失敗');
-      const data = await response.json();
-      const generatedText = data.candidates[0].content.parts[0].text;
+// 3. 發送 API 請求（移除剛剛自訂的 header，回歸最單純的 JSON 格式）
+const response = await fetch(API_URL, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+});
+
+if (!response.ok) throw new Error('API 連線失敗');
+const data = await response.json();
+const generatedText = data.candidates[0].content.parts[0].text;
+
+// 接著是你的 setFormData 邏輯...
       setFormData(prev => ({
         ...prev,
         story: prev.story.trim() ? `${prev.story}\n\n✨ AI 潤飾建議：\n${generatedText}` : generatedText
