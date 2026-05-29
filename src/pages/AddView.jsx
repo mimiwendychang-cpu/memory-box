@@ -99,7 +99,7 @@ export default function AddView({ step, setStep, onFinish }) {
       console.log("Vercel 讀到的金鑰前綴：", apiKey ? apiKey.substring(0, 5) : "找不到金鑰！");
 
 // 2. 把變數帶入網址字串中
-      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
       const emotionContext = formData.emotions.length > 0 ? `這件物品帶給我的情感是：${formData.emotions.join('、')}。` : '';
       const hasUserDraft = formData.story.trim().length > 0;
       
